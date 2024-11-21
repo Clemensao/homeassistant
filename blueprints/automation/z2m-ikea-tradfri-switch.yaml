@@ -1,0 +1,189 @@
+blueprint:
+  name: Z2M IKEA TRADFRI On/Off Switch
+  description: Blueprint for Ikea TRADFRI Remote Controls (On/Off and dim) for controlling
+    lights. Snapshot is saved before turning off.
+  domain: automation
+  source_url: https://community.home-assistant.io/t/z2m-ikea-tradfry-dimmer-switch-on-off-and-dimming/516972
+  input:
+    remote:
+      name: Remote
+      description: IKEA TRADFRI switch to use (e.g sensor.kitchen_remote_action)
+      selector:
+        entity:
+          domain: sensor
+          multiple: false
+    lights:
+      name: Lights
+      description: Light(s) to control when using default light actions
+      default:
+        entity_id: none
+      selector:
+        entity:
+          domain: light
+          multiple: false
+    helper_transition_switch:
+      name: Helper - Transition time in seconds for switching on / off
+      description: Transition time in seconds for switching on / off (0.0-10.0)
+      default: 1
+      selector:
+        number:
+          min: 0.0
+          max: 10.0
+          mode: box
+          step: 0.5
+    helper_step_up:
+      name: Helper - brightness up step
+      description: Step size for changing brightness up (0-20)
+      default: 5
+      selector:
+        number:
+          min: 0.0
+          max: 20.0
+          mode: box
+          step: 1.0
+    helper_step_down:
+      name: Helper - brightness down step
+      description: Step size for changing brightness down (0-20)
+      default: -5
+      selector:
+        number:
+          min: -20.0
+          max: 0.0
+          mode: box
+          step: 1.0
+    helper_transition_dim:
+      name: Helper - Transition time for dimming up / down
+      description: Transition time in seconds for dimming up / down. 0 makes visible
+        steps. Greater than 0.1 makes it smoother. (0.0-10.0)
+      default: 0.5
+      selector:
+        number:
+          min: 0.0
+          max: 10.0
+          mode: box
+          step: 0.5
+    helper_pause:
+      name: Helper - pause between each dimming step
+      description: How long should be delayed between each step of dimming in milliseconds.
+        0 makes no delay. (10-2000)
+      default: 500
+      selector:
+        number:
+          min: 10.0
+          max: 2000.0
+          mode: box
+          step: 10.0
+mode: restart
+max_exceeded: silent
+variables:
+  helper_transition_switch: !input helper_transition_switch
+  helper_step_up: !input helper_step_up
+  helper_step_down: !input helper_step_down
+  helper_transition_dim: !input helper_transition_dim
+  helper_pause: !input helper_pause
+  helper_lights: !input lights
+  snapshot_name: "{{ helper_lights | replace('.','_') + '_snap' }}"
+trigger:
+- platform: state
+  entity_id:
+  - !input remote
+  to: 'on'
+  id: 'on'
+- platform: state
+  entity_id:
+  - !input remote
+  to: 'off'
+  id: 'off'
+- platform: state
+  entity_id:
+  - !input remote
+  to: brightness_move_up
+  id: move_up
+- platform: state
+  entity_id:
+  - !input remote
+  to: brightness_move_down
+  id: move_down
+- platform: state
+  entity_id:
+  - !input remote
+  to: brightness_stop
+  id: stop
+action:
+- choose:
+  - conditions:
+    - condition: trigger
+      id: "on"
+    - condition: state
+      entity_id: !input lights
+      state: "off"
+    sequence: 
+    - choose:
+      # IF scene exists
+      - conditions:
+        - condition: template
+          value_template: "{{ states['scene.' + snapshot_name].state is defined }}"
+        sequence:
+          - service: scene.turn_on
+            data:
+              entity_id:  "{{ 'scene.' ~  snapshot_name }}" 
+      # ELSE turn the lights on
+      default:
+        - service: light.turn_on
+          target:
+            entity_id: !input lights
+          data:
+            transition: !input helper_transition_switch
+            brightness: 150
+  - conditions:
+    - condition: trigger
+      id: "off"
+    - condition: state
+      entity_id: !input lights
+      state: "on"
+    sequence:
+    - service: scene.create
+      data:
+        scene_id: "{{ snapshot_name }}"
+        snapshot_entities: !input lights
+    - service: light.turn_off
+      data:
+        transition: !input helper_transition_switch
+      target:
+        entity_id: !input lights
+  - conditions:
+    - condition: trigger
+      id: move_up
+    sequence:
+    - repeat:
+        count: '20'
+        sequence:
+        - service: light.turn_on
+          data:
+            transition: !input helper_transition_dim
+            brightness_step_pct: !input helper_step_up
+          target:
+            entity_id: !input lights
+        - delay:
+            hours: 0
+            minutes: 0
+            seconds: 0
+            milliseconds: !input helper_pause
+  - conditions:
+    - condition: trigger
+      id: move_down
+    sequence:
+    - repeat:
+        count: '20'
+        sequence:
+        - service: light.turn_on
+          data:
+            transition: !input helper_transition_dim
+            brightness_step_pct: !input helper_step_down
+          target:
+            entity_id: !input lights
+        - delay:
+            hours: 0
+            minutes: 0
+            seconds: 0
+            milliseconds: !input helper_pause

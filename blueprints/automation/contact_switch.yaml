@@ -74,9 +74,9 @@ actions:
             conditions:
               - condition: trigger
                 id: open
-              # continue only when contact sensor hasn't changed within 3 seconds
+              # continue only when contact sensor hasn't changed to off within 3 seconds
               - condition: template
-                value_template: "{{ expand(switch_target.entity_id) | selectattr('last_changed', '<', now() - timedelta(seconds=3)) | list | count > 0 }}"
+                value_template: "{{ expand(switch_target.entity_id) | selectattr('state', 'eq', 'off') | selectattr('last_changed', '>', now() - timedelta(seconds=3)) | list | count == 0 }}"
         sequence:
           - if:
               - condition: template

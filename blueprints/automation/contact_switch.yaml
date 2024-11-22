@@ -48,13 +48,13 @@ variables:
   switch_target: !input 'switch_target'
   night_time: !input 'night_time'
   auto_close_wait: !input 'auto_close_wait'
-trigger:
-  - platform: state
+triggers:
+  - trigger: state
     entity_id: !input 'contact_entity'
     from: 'off'
     to: 'on'
     id: open
-  - platform: state
+  - trigger: state
     entity_id: !input 'contact_entity'
     from: 'on'
     to: 'off'

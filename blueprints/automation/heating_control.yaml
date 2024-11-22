@@ -252,17 +252,17 @@ trigger_variables:
 
 # temperature_changed_t: "{{ external_temp_sensor != none and (as_timestamp(now()) - as_timestamp(states[external_temp_sensor].last_updated)) > 60  }}"
 
-trigger:
+triggers:
   # home assistant eventsexternal_temp_sensor
-  - platform: homeassistant
+  - trigger: homeassistant
     event: start
-  - platform: event
+  - trigger: event
     event_type: automation_reloaded
   # schedule state changes
-  - platform: state
+  - trigger: state
     entity_id: !input 'scheduler'
     id: schedule
-  - platform: template
+  - trigger: template
     value_template: >
       {%  if alarm_time_t != none %}
         {% set next_alarm = states(alarm_time_t) %}
@@ -278,88 +278,88 @@ trigger:
       seconds: 1
     id: schedule
   # peoples presence changes
-  - platform: state
+  - trigger: state
     entity_id: !input 'persons'
     from: 'home'
     to: 'not_home'
     id: presence
-  - platform: state
+  - trigger: state
     entity_id: !input 'persons'
     from: 'not_home'
     to: 'home'
     id: presence
   # window open
-  - platform: template
+  - trigger: template
     value_template: >-
        {{ window_t != none and is_state(window_t, 'on') }}
     for:
       seconds: !input 'window_open_delay'
   # window closes
-  - platform: template
+  - trigger: template
     value_template: >-
        {{ window_t != none and is_state(window_t, 'off') }}
     for:
       seconds: !input 'window_close_delay'
   # moisture threshold
-  - platform: template
+  - trigger: template
     value_template: >-
        {{ moisture_t != none and is_state(moisture_t, 'on') }}
     for:
       seconds: !input 'window_open_delay'
     id: moisture
-  - platform: template
+  - trigger: template
     value_template: >-
        {{ moisture_t != none and is_state(moisture_t, 'off') }}
     for:
       seconds: !input 'window_close_delay'
     id: moisture  
   # winter_mode changes    
-  - platform: template
+  - trigger: template
     value_template: >-
        {{ winter_mode_t != none and is_state(winter_mode_t, 'on') }}
     for:
       seconds: 2
     id: winter
-  - platform: template
+  - trigger: template
     value_template: >-
        {{ winter_mode_t != none and is_state(winter_mode_t, 'off') }}
     for:
       seconds: 2
     id: winter
   # heat mode changes    
-  - platform: template
+  - trigger: template
     value_template: >-
        {{ heat_mode_t != none and is_state(heat_mode_t, 'on') }}
     for:
       seconds: 2
     id: 'heat'
-  - platform: template
+  - trigger: template
     value_template: >-
        {{ heat_mode_t != none and is_state(heat_mode_t, 'off') }}
     for:
       seconds: 2
     id: 'heat'
   # night-time  changes    
-  - platform: template
+  - trigger: template
     value_template: >-
        {{ night_time_t != none and is_state(night_time_t, 'on') }}
     for:
       seconds: 2
     id: night
-  - platform: template
+  - trigger: template
     value_template: >-
        {{ night_time_t != none and is_state(night_time_t, 'off') }}
     for:
       seconds: 2
     id: morning
   # temperature inputs change (eco and night)
-  #- platform: template
+  #- trigger: template
   #  value_template: >-
   #     {{ night_temp_t != none and states(night_temp_t)|float(0) >0 }}
   #  for:
   #    seconds: 2
   #  id: temp_preset
-  #- platform: template
+  #- trigger: template
   #  value_template: >-
   #     {{ eco_temp_t != none and states(eco_temp_t)|float(0) > 0 }}
   #  for:
@@ -367,19 +367,21 @@ trigger:
   #  id: temp_preset
 
   # every 10 minutes 
-  #- platform: time_pattern
+  #- trigger: time_pattern
   #  minutes: "/15"
   #  id: calibration
     
-action:
+actions:
   #################################
   # Calibration
   #################################
   - if:
-    - condition: template
-      value_template: "{{ trigger.platform == 'time_pattern' }}"
-    - condition: template
-      value_template: "{{ external_temp_sensor != none }}"
+    - condition: and
+      conditions:
+        - condition: template
+          value_template: "{{ trigger.platform == 'time_pattern' }}"
+        - condition: template
+          value_template: "{{ external_temp_sensor != none }}"
     then:
     - repeat:
         count: "{{ valves | count | int }}"

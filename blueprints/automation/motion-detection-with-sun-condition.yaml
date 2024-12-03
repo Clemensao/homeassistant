@@ -94,7 +94,7 @@ blueprint:
 mode: restart
 max_exceeded: silent
 variables:
-  light_target: !input 'light_target'
+  lights: !input 'light_target'
   illuminance_sensor: !input 'illuminance_sensor'
   illuminance_threshold: !input 'illuminance_threshold'
   brightness_day: !input 'brightness_day'
@@ -117,23 +117,23 @@ condition:
     value_template: "{{ illuminance_sensor != none and states(illuminance_sensor)|float(0) < illuminance_threshold }}"
 action:
 - service: light.turn_on
-  target: "{{ light_target }}"
-- wait_template: "{{ state_attr(light_target.entity_id,'brightness') != None }}"
+  target: "{{ lights }}"
+- wait_template: "{{ expand(lights.entity_id) | selectattr('state', '==', 'on') | list | count > 0 }}"
   continue_on_timeout: false
 - if:
     - condition: template
-      value_template: "{{ night_time != none and is_state(night_time, 'off') and state_attr(light_target.entity_id,'brightness') < 10 }}"
+      value_template: "{{ night_time != none and is_state(night_time, 'off') and expand(lights.entity_id) | map(attribute='attributes.brightness') | list | first | int(0) < 10 }}"
   then:
     - service: light.turn_on
-      target: "{{ light_target }}"
+      target: "{{ lights }}"
       data:
         brightness: "{{ brightness_day }}"
 - if:
     - condition: template
-      value_template: "{{ night_time != none and is_state(night_time, 'on') and state_attr(light_target.entity_id,'brightness') > 10 }}"
+      value_template: "{{ night_time != none and is_state(night_time, 'on') and expand(lights.entity_id) | map(attribute='attributes.brightness') | list | first | int(0) > 10 }}"
   then:
     - service: light.turn_on
-      target: "{{ light_target }}"
+      target: "{{ lights }}"
       data:
         brightness: 5
 - wait_for_trigger:
@@ -143,6 +143,6 @@ action:
     to: 'off'
 - delay: !input no_motion_wait
 - service: light.turn_off
-  target: "{{ light_target }}"
+  target: "{{ lights }}"
   data:
       transition: !input transition_time

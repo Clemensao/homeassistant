@@ -300,6 +300,7 @@ triggers:
        {{ window_t != none and is_state(window_t, 'off') }}
     for:
       seconds: !input 'window_close_delay'
+    id: window
   # moisture threshold
   - trigger: template
     value_template: >-
@@ -465,6 +466,12 @@ actions:
                   value_template: "{{ trigger.platform in ['state','homeassistant','event'] }}"
                 - condition: template
                   value_template: "{{ trigger.id in ['heat','winter','schedule','presence','moisture','night','morning','temp_preset'] }}"
+                - condition: and
+                  conditions:
+                    - condition: template
+                      value_template: "{{ trigger.id in ['window'] }}" 
+                    - condition: template
+                      value_template: "{{ (now() - states[valves[repeat.index-1]].last_changed) > timedelta(hours = 1)  }}"  
         - delay: 3 
         - service: climate.set_temperature
           data:

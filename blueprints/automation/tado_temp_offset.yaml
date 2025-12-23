@@ -64,7 +64,7 @@ variables:
   current_offset: '{{ state_attr(target_tado, "offset_celsius") }}'
   actual_temp: "{{ states(source_temp_sensor) | float(19) }}"
   is_day: '{{ night_switch == none or (night_switch != none and is_state(night_switch, "off")) }}' # flag for determining the daytime-mode
-  heating_rate: '{{ expand(device_entities(device_id(target_tado))) | selectattr("entity_id","match", "^sensor.*heating$") | map(attribute="state") | first | float }}' # Adjust based on Tado's attributes
+  heating_rate: '{{ expand(device_entities(device_id(target_tado))) | selectattr("entity_id","match", "^sensor.*heating$") | map(attribute="state") | first | float }}'
   offset: '{{ ( actual_temp - tado_temp ) | round(1,"common") }}'
   calculated_offset: '{{ ( offset + current_offset ) | round(1,"common") }}'
 trigger:

@@ -4,6 +4,8 @@
 #   @package        :   Smart Heater
 #   @description    :   Govee Smart Heater 
 #   @original       :   
+#   @version        :   1.0 : package 
+#                       1.1 : modernized template syntax
 ###############################################################################
 
 rest_command:
@@ -114,46 +116,44 @@ script:
     mode: single
     icon: mdi:hvac
 
-
-fan:
-  platform: template
-  fans:
-    smart_space_heater:
-      friendly_name: "Heizlüfter"
-      value_template: "{{ states('sensor.smart_heater_govee_state') == '1' }}"
-      availability_template: "{{ states('sensor.smart_heater_govee_state') != 'unavailable' }}"
-      preset_mode_template: "{{ states('input_select.smart_heater_mode') }}"
-      turn_on:
-        service: script.govee_smart_heater_control
-        data:
-          device: "2D:EF:D4:AD:FC:85:65:EB"
-          model: "H713C"
-          cmd_name: "turn"
-          cmd_value: "on"
-          state_input: sensor.smart_heater_govee_state
-      turn_off:
-        service: script.govee_smart_heater_control
-        data:
-          device: "2D:EF:D4:AD:FC:85:65:EB"
-          model: "H713C"
-          cmd_name: "turn"
-          cmd_value: "off"
-          state_input: sensor.smart_heater_govee_state
-      set_preset_mode:
-        service: script.govee_smart_heater_control
-        data:
-          device: "2D:EF:D4:AD:FC:85:65:EB"
-          model: "H713C"
-          cmd_name: "mode"
-          cmd_value: >
-            {% set mapper = {'Low': 1, 'Medium': 2, 'High': 3, 'Fan': 4, 'Auto': 5} %}
-            {{ mapper[preset_mode] }}
-          state_input: sensor.smart_heater_govee_state
-          mode_input: input_select.smart_heater_mode
-      speed_count: 5
-      preset_modes:
-        - 'Low'
-        - 'Medium'
-        - 'High'
-        - 'Fan'
-        - 'Auto'
+template:
+- fan:
+  - default_entity_id: fan.smart_space_heater
+    name: Heizlüfter
+    turn_on:
+    - data:
+        device: 2D:EF:D4:AD:FC:85:65:EB
+        model: H713C
+        cmd_name: turn
+        cmd_value: 'on'
+        state_input: sensor.smart_heater_govee_state
+      action: script.govee_smart_heater_control
+    turn_off:
+    - data:
+        device: 2D:EF:D4:AD:FC:85:65:EB
+        model: H713C
+        cmd_name: turn
+        cmd_value: 'off'
+        state_input: sensor.smart_heater_govee_state
+      action: script.govee_smart_heater_control
+    set_preset_mode:
+    - data:
+        device: 2D:EF:D4:AD:FC:85:65:EB
+        model: H713C
+        cmd_name: mode
+        cmd_value: '{% set mapper = {''Low'': 1, ''Medium'': 2, ''High'': 3, ''Fan'':
+          4, ''Auto'': 5} %} {{ mapper[preset_mode] }}'
+        state_input: sensor.smart_heater_govee_state
+        mode_input: input_select.smart_heater_mode
+      action: script.govee_smart_heater_control
+    speed_count: 5
+    preset_modes:
+    - Low
+    - Medium
+    - High
+    - Fan
+    - Auto
+    availability: '{{ states(''sensor.smart_heater_govee_state'') != ''unavailable''
+      }}'
+    preset_mode: '{{ states(''input_select.smart_heater_mode'') }}'
+    state: '{{ states(''sensor.smart_heater_govee_state'') == ''1'' }}'

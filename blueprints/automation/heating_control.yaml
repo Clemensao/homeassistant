@@ -1,83 +1,20 @@
 blueprint:
   name: "Heating Control"
-  description: 'Automatic heating based on a scheduler, presence of people
-    and optional dependencies such as window opening, temperature calibration using a separate temperature sensor (only when valve position < 10%).
-    Presence-detection is only used for adjusting the temperature.
-    The temperature only changes when Scheduler or Presence change, also on restart! (So meanwhile you can dial the thermostat manually) <br />
-    Eco and Night-temperature can be set by an input_number helper, so you can control the temperatures globally.
-    Optional: <br />
-    <ul>
-    <li>Work from home: this boolean helper can enable or disable the scheduler per room</li>
-    <li>Nighttime sensor: use the night-temperature (to prevent the heating from frequent switching)</li>
-    <li>Heat mode: comfort</li>
-    </ul>
-    <p>
-    Device specific behaviour:
-    Tado: "heat"-mode is used because in "auto" mode Tado uses its own schedules
-    </p>'
+  description: >
+    Automatic heating based on scheduler, presence, night mode, window state and humidity.
+    Temperature changes only on relevant state changes or restart – manual thermostat changes remain possible.
+    Window has highest priority. Humidity enforces comfort temperature.
+    Tado devices are set to "heat" mode to avoid internal schedules.
   source_url: "https://github.com/clemensao/homeassistant/blob/main/blueprints/automation/heating_control.yaml"
   domain: automation
   input:
-    heating:
+    thermostats:
       name: "Thermostats / Valves"
       description: "Thermostats to be controlled"
       selector:
         entity:
           domain: climate
           multiple: true
-
-    night_temp_input:
-      name: "Night temperatue (optional)"
-      description: "The temperature which is set at nighttime, using a helper number input (optional)."
-      default:
-      selector:
-        entity:
-          domain: input_number
-
-    night_time:
-      name: "Nighttime"
-      description: "Sensor that tells it is night time"
-      default:
-      selector:
-        entity:
-          domain:
-            - binary_sensor
-            - input_boolean
-    min_temp:
-      name: "Eco temperature"
-      description: "If no one is at home, the Eco temperature is set."
-      default: 18
-      selector:
-        number:
-          min: 5
-          max: 25
-          step: 0.5
-          mode: slider
-    min_temp_input:
-      name: "Eco temperature input (optional)"
-      description: 'If no one is at home, the eco temperature is set by a helper number input. This overrides the "Eco temperature". (optional)'
-      default:
-      selector:
-        entity:
-          domain: input_number
-
-    comfort_temp:
-      name: "Comfort temperature"
-      description: "If someone is at home and the schedule is on, the comfort temperature is set."
-      default: 20
-      selector:
-        number:
-          min: 10
-          max: 25
-          step: 0.5
-          mode: slider
-    comfort_temp_input:
-      name: "Comfort temperature from input (optional)"
-      description: 'If someone is at home and the schedule is on, the comfort temperature is set by a helper number input. This overrides the "EcoComfort temperature". (optional)'
-      default:
-      selector:
-        entity:
-          domain: input_number
 
     persons:
       name: "Persons"
@@ -97,6 +34,16 @@ blueprint:
           domain: schedule
           multiple: false
 
+    night_time:
+      name: "Nighttime"
+      description: "Sensor that tells it is night time"
+      default:
+      selector:
+        entity:
+          domain:
+            - binary_sensor
+            - input_boolean
+
     alarm_time:
       name: "Next time the alarm clock rings (optional)"
       description: "Use a sensor for alarm time to determine whether you want to sleep in or work (optional)."
@@ -113,6 +60,22 @@ blueprint:
         entity:
           domain: input_boolean
 
+    winter_mode:
+      name: "Wintertime (optional)"
+      description: "If this input boolean is off, heating will never occur."
+      default:
+      selector:
+        entity:
+          domain: input_boolean
+
+    heat_mode:
+      name: "Heat mode (optional)"
+      description: "Overwrites winter mode and scheduler. If on, heating is activated."
+      default:
+      selector:
+        entity:
+          domain: input_boolean
+
     window:
       name: "Window (optional)"
       description: "Window that turns off the thermostats if it is open."
@@ -120,6 +83,61 @@ blueprint:
       selector:
         entity:
           domain: binary_sensor
+
+    moisture_threshold:
+      name: "Humidity Threshold (optional)"
+      description: "A threshold helper reflecting Humidity can be added. If on (humid) it overrides scheduler and presence"
+      default:
+      selector:
+        entity:
+          domain: binary_sensor
+          device_class: moisture
+    
+    min_temp:
+      name: "Eco temperature"
+      description: "If no one is at home, the Eco temperature is set."
+      default: 18
+      selector:
+        number:
+          min: 5
+          max: 25
+          step: 0.5
+          mode: slider
+
+    min_temp_input:
+      name: "Eco temperature input (optional)"
+      description: 'If no one is at home, the eco temperature is set by a helper number input. This overrides the "Eco temperature". (optional)'
+      default:
+      selector:
+        entity:
+          domain: input_number
+
+    comfort_temp:
+      name: "Comfort temperature"
+      description: "If someone is at home and the schedule is on, the comfort temperature is set."
+      default: 20
+      selector:
+        number:
+          min: 10
+          max: 25
+          step: 0.5
+          mode: slider
+
+    comfort_temp_input:
+      name: "Comfort temperature from input (optional)"
+      description: 'If someone is at home and the schedule is on, the comfort temperature is set by a helper number input. This overrides the "EcoComfort temperature". (optional)'
+      default:
+      selector:
+        entity:
+          domain: input_number
+
+    night_temp_input:
+      name: "Night temperatue (optional)"
+      description: "The temperature which is set at nighttime, using a helper number input (optional)."
+      default:
+      selector:
+        entity:
+          domain: input_number    
 
     window_open_delay:
       name: "Window reaction time"
@@ -143,35 +161,10 @@ blueprint:
           step: 1
           mode: slider
 
-    winter_mode:
-      name: "Wintertime (optional)"
-      description: "If this input boolean is off, heating will never occur."
-      default:
-      selector:
-        entity:
-          domain: input_boolean
-
-    heat_mode:
-      name: "Heat mode (optional)"
-      description: "Overwrites winter mode and scheduler. If on, heating is activated."
-      default:
-      selector:
-        entity:
-          domain: input_boolean
-
-    moisture_threshold:
-      name: "Humidity Threshold (optional)"
-      description: "A threshold helper reflecting Humidity can be added. If on (humid) it overrides scheduler and presence"
-      default:
-      selector:
-        entity:
-          domain: binary_sensor
-          device_class: moisture
-
 variables:
-  # valves
-  trvs: !input "heating"
-  valves: "{{ expand(trvs) | map(attribute='entity_id') | list }}"
+  # thermostats
+  thermostats: !input "thermostats"
+  valves: "{{ expand(thermostats) | map(attribute='entity_id') | list }}"
   # temperatures
   night_temp: !input "night_temp_input"
   eco_temp: !input "min_temp"
@@ -180,21 +173,21 @@ variables:
   comfort_temp_input: !input "comfort_temp_input"
   # sensors
   persons: !input "persons"
-  persons_home_count: "{{ expand(persons) | selectattr('state', 'eq', 'home') | list | count }}"
+  persons_home: "{{ expand(persons) | selectattr('state', 'eq', 'home') | list | count }}"
   window: !input "window"
-  window_state: "{{ window != none and is_state(window, 'on') }}"
+  window_open: "{{ window != none and is_state(window, 'on') }}"
   moisture_sensor: !input "moisture_threshold"
-  moisture_flag: "{{ moisture_sensor != none and is_state(moisture_sensor,'on') }}"
+  moisture: "{{ moisture_sensor != none and is_state(moisture_sensor,'on') }}"
   # switches
   scheduler: !input "scheduler"
   winter_mode: !input "winter_mode"
-  winter_state: "{{ winter_mode == none or is_state(winter_mode, 'on') }}"
+  winter_active: "{{ winter_mode == none or is_state(winter_mode, 'on') }}"
   heat_mode: !input "heat_mode"
-  force_heat_state: "{{ heat_mode != none and is_state(heat_mode, 'on') }}"
+  force_heat: "{{ heat_mode != none and is_state(heat_mode, 'on') }}"
   home_office: !input "home_office"
-  homeoffice_state: "{{ home_office == none or (home_office != none and is_state(home_office, 'on')) }}"
+  homeoffice_ok: "{{ home_office == none or (home_office != none and is_state(home_office, 'on')) }}"
   night_time: !input "night_time"
-  night_state: "{{ night_time != none and is_state(night_time, 'on') }}"
+  night: "{{ night_time != none and is_state(night_time, 'on') }}"
   alarm_time: !input "alarm_time"
   pre_alarm_time: >
     {% set pre_alarm = false %}
@@ -204,29 +197,17 @@ variables:
         {% set pre_alarm = true %}
       {% endif %}
     {% endif %}
-    {{ night_state == true and alarm_time != none and pre_alarm }}
-  use_scheduler: "{{ alarm_time == none or night_state == false or pre_alarm_time == true }}"
-  mode: >
-    {% if (winter_state == true or force_heat_state == true) and window_state == false %}
-      auto
-    {% else %}
-      off
-    {% endif %}
+    {{ night == true and alarm_time != none and pre_alarm }}
+  use_scheduler: "{{ alarm_time == none or night == false or pre_alarm_time == true }}"
+  heating_enabled: "{{ (winter_active or force_heat) and not window_open }}"
+
   temperature: >
-    {% if ((((states(scheduler) == 'on' and homeoffice_state == true and use_scheduler == true) or force_heat_state == true) and persons_home_count | int > 0 ) or moisture_flag == true) %}
-      {% if comfort_temp_input != none %}
-        {{ states(comfort_temp_input) }}
-      {% else %}
-        {{ comfort_temp }}
-      {% endif %}
-    {% elif night_state == true and night_temp != none %}
-      {{ states(night_temp) }}
+    {% if ( (is_state(scheduler,'on') and homeoffice_ok and use_scheduler) or force_heat ) and persons_home > 0 or moisture %}
+      {{ states(comfort_temp_input) if comfort_temp_input != none else comfort_temp }}
+    {% elif night and night_temp_input != none %}
+      {{ states(night_temp_input) }}
     {% else %}
-      {% if eco_temp_input != none %}
-        {{ states(eco_temp_input) }}
-      {% else %}
-        {{ eco_temp }}
-      {% endif %}
+      {{ states(eco_temp_input) if eco_temp_input != none else eco_temp }}
     {% endif %}
 
 trigger_variables:
@@ -267,13 +248,6 @@ triggers:
   # peoples presence changes
   - trigger: state
     entity_id: !input "persons"
-    from: "home"
-    to: "not_home"
-    id: presence
-  - trigger: state
-    entity_id: !input "persons"
-    from: "not_home"
-    to: "home"
     id: presence
   # window open
   - trigger: template
@@ -281,13 +255,14 @@ triggers:
       {{ window_t != none and is_state(window_t, 'on') }}
     for:
       seconds: !input "window_open_delay"
+    id: window_open
   # window closes
   - trigger: template
     value_template: >-
       {{ window_t != none and is_state(window_t, 'off') }}
     for:
       seconds: !input "window_close_delay"
-    id: window
+    id: window_close
   # moisture threshold
   - trigger: template
     value_template: >-
@@ -356,41 +331,38 @@ triggers:
 
 actions:
   - repeat:
-      count: "{{ valves | count | int }}"
+      count: "{{ valves | count }}"
       sequence:
         - service: climate.set_hvac_mode
           target:
-            entity_id: >
-              {{ valves[repeat.index-1] }}
+            entity_id: "{{ valves[repeat.index-1] }}"
           data:
-            # set Tado devices to heat, otherwise the internal scheduler would be taken
             hvac_mode: >
-              {% set current_valve = valves[repeat.index-1] %}
-              {% set manufacturer = device_attr(device_id(current_valve),'manufacturer') %}
-              {% if (manufacturer == 'Tado' and mode != 'off') %}
-                {{ "heat" }}
+              {% set m = device_attr(device_id(valves[repeat.index-1]), 'manufacturer') %}
+              {% if heating_enabled %}
+                {{ 'heat' if m == 'Tado' else 'auto' }}
               {% else %}
-                {{ mode }}
+                off
               {% endif %}
-        - condition: and
-          conditions:
-            - condition: template
-              value_template: "{{ mode in ['auto','heat'] }}"
-            - or:
-                - condition: template
-                  value_template: "{{ trigger.platform in ['state','homeassistant','event'] }}"
-                - condition: template
-                  value_template: "{{ trigger.id in ['heat','winter','schedule','presence','moisture','night','morning','temp_preset'] }}"
-                - condition: and
-                  conditions:
-                    - condition: template
-                      value_template: "{{ trigger.id in ['window'] }}"
-                    - condition: template
-                      value_template: "{{ (now() - states[valves[repeat.index-1]].last_changed) > timedelta(hours = 1)  }}"
+
+        - condition: template
+          value_template: "{{ heating_enabled }}"
+
+        # 🌙 set temperature on closing window only at night
+        - condition: template
+          value_template: >
+            {{
+              trigger.id not in ['window_open','window_close']
+              or
+              (trigger.id == 'window_close' and night)
+            }}
+
         - delay: 3
+
         - service: climate.set_temperature
+          target:
+            entity_id: "{{ valves[repeat.index-1] }}"
           data:
-            entity_id: !input "heating"
             temperature: "{{ temperature | float }}"
 
 mode: restart

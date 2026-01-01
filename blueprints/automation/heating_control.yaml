@@ -166,7 +166,7 @@ variables:
   thermostats: !input "thermostats"
   valves: "{{ expand(thermostats) | map(attribute='entity_id') | list }}"
   # temperatures
-  night_temp: !input "night_temp_input"
+  night_temp_input: !input "night_temp_input"
   eco_temp: !input "min_temp"
   eco_temp_input: !input "min_temp_input"
   comfort_temp: !input "comfort_temp"

@@ -50,7 +50,10 @@ blueprint:
       default:
       selector:
         entity:
-          device_class: timestamp
+          multiple: false
+          filter:
+            - domain: input_datetime
+            - device_class: datetime
 
     home_office:
       name: "Working at home (optional)"
@@ -189,16 +192,16 @@ variables:
   night_time: !input "night_time"
   night: "{{ night_time != none and is_state(night_time, 'on') }}"
   alarm_time: !input "alarm_time"
-  pre_alarm_time: >
-    {% set pre_alarm = false %}
+  pre_alarm: >
+    {% set is_alarm = false %}
     {% if alarm_time != none %}
       {% set next_alarm = states(alarm_time) %}
       {% if next_alarm not in ['unknown','unavailable'] and now() >= (as_local(as_datetime(next_alarm)) - timedelta(minutes=45)) %} 
-        {% set pre_alarm = true %}
+        {% set is_alarm = true %}
       {% endif %}
     {% endif %}
-    {{ night == true and alarm_time != none and pre_alarm }}
-  use_scheduler: "{{ alarm_time == none or night == false or pre_alarm_time == true }}"
+    {{ night == true and alarm_time != none and is_alarm }}
+  use_scheduler: "{{ alarm_time == none or night == false or pre_alarm == true }}"
   heating_enabled: "{{ (winter_active or force_heat) and not window_open }}"
 
   temperature: >

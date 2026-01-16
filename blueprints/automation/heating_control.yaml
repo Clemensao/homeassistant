@@ -341,12 +341,7 @@ actions:
             entity_id: "{{ valves[repeat.index-1] }}"
           data:
             hvac_mode: >
-              {% set m = device_attr(device_id(valves[repeat.index-1]), 'manufacturer') %}
-              {% if heating_enabled %}
-                {{ 'heat' if m == 'Tado' else 'auto' }}
-              {% else %}
-                off
-              {% endif %}
+              {{ iif(heating_enabled, 'heat', 'off') }}
 
         - condition: template
           value_template: "{{ heating_enabled }}"

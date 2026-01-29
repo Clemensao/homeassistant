@@ -2,7 +2,9 @@ blueprint:
   name: Tado temperature offset (robust & safe)
   description: >
     Synchronisiert den Temperatur-Offset eines Tado-Thermostats mit einem externen
-    Temperatursensor. Unterstützt minimale Offset-Differenz, Offset-Clamp (-4…+4 °C),
+    Temperatursensor. Optional kann eine lokale HomeKit-Thermostat-Entität verwendet
+    werden, deren Temperatur häufiger aktualisiert wird.
+    Unterstützt minimale Offset-Differenz, Offset-Clamp (-4…+4 °C),
     Failsafe bei ungültigen Sensorwerten sowie einen Cooldown zwischen Updates.
     Tagsüber erfolgt das Update in einem frei konfigurierbaren Minutenintervall,
     nachts maximal alle 2 Stunden.
@@ -17,15 +19,24 @@ blueprint:
           device_class: temperature
 
     target_tado:
-      name: Target Tado thermostat
+      name: Target Tado thermostat (cloud)
       selector:
         entity:
           domain: climate
           integration: tado
 
+    local_tado:
+      name: Local Tado thermostat (optional, HomeKit or Matter)
+      description: >
+        Optional lokale Tado-Entität (z. B. Matter oder HomeKit).
+        Wenn gesetzt, wird deren current_temperature verwendet.
+      default: ""
+      selector:
+        entity:
+          domain: climate
+
     min_offset_delta:
       name: Minimal offset difference (°C)
-      description: Minimal difference required to trigger an update
       default: 0.2
       selector:
         number:
@@ -46,7 +57,6 @@ blueprint:
 
     cooldown_minutes:
       name: Cooldown between updates (minutes)
-      description: Minimal time between two offset updates
       default: 60
       selector:
         number:
@@ -75,13 +85,21 @@ blueprint:
 
 variables:
   target_tado: !input target_tado
+  local_tado: !input local_tado
   source_temp_sensor: !input source_temp_sensor
   min_offset_delta: !input min_offset_delta
   day_interval_minutes: !input day_interval_minutes
   cooldown_minutes: !input cooldown_minutes
   night_switch: !input night_switch
 
-  tado_temp: "{{ state_attr(target_tado, 'current_temperature') | float(0) }}"
+  # Temperaturquelle: lokal bevorzugt, sonst Tado-Cloud
+  tado_temp: >
+    {{ (
+         state_attr(local_tado, 'current_temperature')
+         if local_tado != none
+         else state_attr(target_tado, 'current_temperature')
+       ) | float(0) }}
+
   actual_temp: "{{ states(source_temp_sensor) | float(0) }}"
   current_offset: "{{ state_attr(target_tado, 'offset_celsius') | default(0) | float }}"
 
@@ -96,7 +114,11 @@ variables:
        and actual_temp > 0 }}
 
   tado_valid: >
-    {{ state_attr(target_tado, 'current_temperature') is not none
+    {{ (
+         state_attr(local_tado, 'current_temperature')
+         if local_tado != none
+         else state_attr(target_tado, 'current_temperature')
+       ) is not none
        and tado_temp > 0 }}
 
   is_day: "{{ night_switch == none or is_state(night_switch, 'off') }}"
@@ -157,10 +179,10 @@ condition:
         value_template: >
           {{ not is_day and trigger.id == 'night' }}
 
-      # Immediate sensor trigger
+      # Immediate sensor / local trigger
       - condition: template
         value_template: >
-          {{ trigger_sensor and trigger.platform == 'state' }}
+          {{ trigger.platform == 'state' }}
 
 action:
   - service: system_log.write
@@ -169,7 +191,8 @@ action:
       level: info
       message: >
         Setting Tado offset for {{ target_tado }} to {{ calculated_offset }} °C
-        (raw {{ raw_offset }} °C, delta {{ offset_delta }} °C)
+        (raw {{ raw_offset }} °C, delta {{ offset_delta }} °C, 
+        source={{ 'local' if local_tado is not none else 'tado-cloud' }})
 
   - service: tado.set_climate_temperature_offset
     data:

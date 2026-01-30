@@ -1,0 +1,55 @@
+{% macro hvac_state(x) %}
+    {{ {
+    'heating': 'Heizen',
+    'idle': 'Standby',
+    'off': 'Aus',
+    'cooling': 'Kühlen',
+    'drying': 'Entfeuchten',
+    None: 'Unbekannt'
+    }.get(x, x) }}
+{% endmacro %}
+
+{% macro hvac_icon(x) %}
+    {{ {
+    'heating': 'mdi:fire',
+    'idle': 'mdi:clock-outline',
+    'off': 'mdi:power-off',
+    'cooling': 'mdi:snowflake',
+    'drying': 'mdi:water-off',
+    None: ''
+    }.get(x, x) }}
+{% endmacro %}
+
+{% macro climate_icon(entity) %}
+{% set hvac = state_attr(entity, 'hvac_action') %}
+{% if is_state(entity, 'off') %}
+  mdi:power
+{% elif states(entity) in ['unavailable','unknown'] %}
+  mdi:alert-circle-outline
+{% else %}
+  {{
+    {
+      'heating': 'mdi:fire',
+      'idle': 'mdi:clock-outline',
+      'cooling': 'mdi:snowflake',
+      'drying': 'mdi:water-off'
+    }.get(hvac, 'mdi:thermostat')
+  }}
+{% endif %}
+{% endmacro %}
+
+{% macro hvac_color(hvac) %}
+{% if hvac in ['off', None] %}
+  none
+{% elif hvac in ['unknown','unavailable'] %}
+  red
+{% else %}
+  {{
+    {
+      'heating': 'deep-orange',
+      'cooling': 'light-blue',
+      'drying': 'orange'
+    }.get(hvac, 'grey')
+  }}
+{% endif %}
+{% endmacro %}

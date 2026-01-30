@@ -1,0 +1,86 @@
+{% macro get_color_by_temperature(temperature, alpha, property) %}
+{% set temp = temperature %}
+{% if temp in ['unknown','unavailable'] %}
+    {% set retVal = '' %}
+{% elif temp|float(0) >= 23 %}
+    {# red - Sunset Orange #}
+    {% set retVal = 'rgba(250, 95, 85, '+ alpha|string + ');' %}
+{% elif temp|float(0) >= 20.5 %}
+    {# orange - Mango #}
+    {% set retVal = 'rgba(244, 187, 68, ' + alpha|string + ');'  %}
+{% elif temp|float(0) >= 19 %}
+    {# yellow - Icterine #}
+    {% set retVal = 'rgba(252, 245, 95, ' + alpha|string + ');' %}
+{% elif temp|float(0) >= 17.5 %}  
+    {# green - Celadon #}
+    {% set retVal =  'rgba(175, 225, 175, ' + alpha|string + ');' %}
+{% elif temp|float(0) >= 16 %}
+    {# blue - Cornflower Blue #}
+    {% set retVal =  'rgba(100, 149, 237, ' + alpha|string + ');' %}
+{% else %}
+    {# purple - Orchid #}
+    {% set retVal = 'rgb(218, 112, 214, ' + alpha|string + ');' %}
+{% endif %}
+{% if retVal != '' %}
+{{ property }}: {{ retVal }}
+{% endif %}
+{% endmacro %}
+
+{% macro get_rgb_heat_by_ratio(ratio) %}
+{% if ratio in ['unknown','unavailable'] %}
+    {% set retVal = '' %}
+{% elif ratio|float(0) >= 80 %}
+    {% set retVal = '255, 110, 34' %}
+{% elif ratio|float(0) >= 60 %}
+    {% set retVal = '255, 136, 74'  %}
+{% elif ratio|float(0) >= 40 %}
+    {% set retVal = '255, 160, 109' %}
+{% elif ratio|float(0) >= 20 %}
+    {% set retVal = '255, 184, 145' %}
+{% elif ratio|float(0) > 0 %}
+    {% set retVal = '255, 208, 181' %}
+{% else %}
+  {% set retVal = '189, 189, 189' %}
+{% endif %}
+{{ retVal }}
+{% endmacro %}
+
+{% macro get_hex_heat_by_ratio(ratio) %}
+{% if ratio in ['unknown','unavailable'] %}
+    {% set retVal = '' %}
+{% elif ratio|float(0) >= 80 %}
+    {% set retVal = '#ff6e22' %}
+{% elif ratio|float(0) >= 60 %}
+    {% set retVal = '#ff884a'  %}
+{% elif ratio|float(0) >= 40 %}
+    {% set retVal = '#ffa06d' %}
+{% elif ratio|float(0) >= 20 %}
+    {% set retVal = '#ffb891' %}
+{% elif ratio|float(0) > 0 %}
+    {% set retVal = '#ffd0b5' %}
+{% else %}
+  {% set retVal = '' %}
+{% endif %}
+{{ retVal }}
+{% endmacro %}
+
+
+{% macro get_color_by_humidity(humidity, property) %}
+{% set hum = humidity %}
+{% set min_threshold = states('input_number.luftfeuchte_limit')|float(62) %}
+{% if hum in ['unknown','unavailable'] %}
+    {% set retVal = '' %}
+{% elif hum|float(0) > 90 %}
+    {% set retVal = '#315e96' %}
+{% elif hum|float(0) > 80 %}
+    {% set retVal = '#5976a7'  %}
+{% elif hum|float(0) > 70 %}
+    {% set retVal = '#7b90b8' %}
+{% elif hum|float(0) > min_threshold %}  
+    {% set retVal =  '#9cabca' %}
+{% endif %}
+{% if retVal != '' %}
+{{property}}: {{ retVal }};
+{% endif %}
+{% endmacro %}
+

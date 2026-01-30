@@ -1,0 +1,42 @@
+{% macro high_humidity_rooms(threshold) %}
+{% set high_humidity = expand('sensor.luftfeuchte') | map(attribute='state') | map('float') | select('>', threshold) |  map('string') | list  %}
+{% set high_humidity_sensors = expand('sensor.luftfeuchte') | selectattr('state', 'in', high_humidity) %}
+{% set data = namespace(hits=[]) %}  
+{% for state in high_humidity_sensors %} 
+  {% set entry = area_name(state.entity_id) + " (" + state.state + "%)" %} 
+  {% set data.hits = data.hits + [entry] %} 
+{% endfor %} 
+{% if data.hits | count > 0 %}{{ data.hits | join(", ") | trim }}{% endif %}
+{% endmacro %}
+
+{% macro welcome() %}
+{% set time = now().hour %}
+{% if (time >= 18) %}
+  Guten Abend {{user}}!
+{% elif (time >= 12) %}
+  Guten Tag {{user}}!
+{% elif (time >= 5) %}
+  Guten Morgen {{user}}!
+{% else %}
+  Hallo {{user}}!
+{% endif %}
+{% endmacro %}
+
+{% macro weekday(day) %}
+{% set days = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'] %}
+{{ days[day] }}
+{% endmacro %}
+
+{% macro monthname(month) %}
+{% set months = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'] %}
+{{ months[month] }}
+{% endmacro %}
+
+{% macro format_alarmtime(entity) %}
+{% set dt = states(entity) %}
+{% if dt in ('unknown','unavailable') %}
+  {{ state_translated(entity) }}
+{% else %}
+  {{ as_timestamp(dt) | timestamp_custom('%a %H:%M', true) }}
+{% endif %}
+{% endmacro %}

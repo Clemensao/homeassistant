@@ -104,10 +104,10 @@ variables:
   current_offset: "{{ state_attr(target_tado, 'offset_celsius') | default(0) | float }}"
 
   raw_offset: "{{ (actual_temp - tado_temp) | round(1) }}"
-  calculated_offset: >
-    {{ [ [ raw_offset, -4.0 ] | max, 4.0 ] | min }}
+  raw_offset_abs: "{{ raw_offset | abs }}"
 
-  offset_delta: "{{ (calculated_offset - current_offset) | abs }}"
+  calculated_offset: >
+    {{ [ [ raw_offset + current_offset, -4.0 ] | max, 4.0 ] | min }}
 
   source_valid: >
     {{ states(source_temp_sensor) not in ['unknown', 'unavailable']
@@ -158,7 +158,7 @@ condition:
     value_template: >
       {{ source_valid
          and tado_valid
-         and offset_delta >= min_offset_delta }}
+         and raw_offset_abs >= min_offset_delta }}
 
   # Cooldown
   - condition: template
@@ -191,9 +191,13 @@ action:
       level: info
       message: >
         Setting Tado offset for {{ target_tado }} to {{ calculated_offset }} °C
-        (raw {{ raw_offset }} °C, delta {{ offset_delta }} °C, 
+        (raw: {{ actual_temp }} - {{ tado_temp }} = {{ raw_offset }} °C,
         source={{ 'local' if local_tado is not none else 'tado-cloud' }})
-
+  - condition: template
+    value_template: >
+      {{ source_valid
+         and tado_valid
+         and raw_offset_abs >= min_offset_delta }}
   - service: tado.set_climate_temperature_offset
     data:
       entity_id: "{{ target_tado }}"
